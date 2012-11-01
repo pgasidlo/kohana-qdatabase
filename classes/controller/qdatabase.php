@@ -9,7 +9,13 @@ class Controller_QDatabase extends Controller {
     $this->qdb->begin();
     $this->qdb->begin();
     $query = $this->qdb->query(
-      "SELECT :i AS i, :s AS s, :b AS b, :null AS null, :hs AS hs, :ia AS ia",
+      "SELECT 
+        :i AS i, 
+        :s AS s, 
+        :b AS b, 
+        :null AS null, 
+        :hs AS hs, 
+        :ia AS ia",
       array(
         ':i' => array(1, 'int'),
         ':s' => array('ALA', 'text'),
@@ -19,11 +25,16 @@ class Controller_QDatabase extends Controller {
         ':ia' => array(array(1,2,3,NULL,5), 'int[]'),
       )
     );
-    foreach ($query as $result) {
+    foreach ($query->result(false) as $result) {
       var_dump($result);
     }
+    $this->qdb->query("INSERT INTO test(i) VALUES(1)");
+    $this->qdb->query("INSERT INTO test(i) VALUES(2) RETURNING *");
     $this->qdb->commit();
     $this->qdb->rollback();
+    echo '<div id="qdatabase-queries">';
+    echo View::factory('qdatabase/queries');
+    echo '</div>';
     echo '<div id="kohana-profiler">';
     echo View::factory('profiler/stats');
     echo '</div>';
