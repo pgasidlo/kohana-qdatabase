@@ -1,0 +1,13 @@
+.qdatabase table { width: 99%; border-collapse: collapse; margin: 0 auto 1em; }
+.qdatabase table .left { text-align: left; }
+.qdatabase table .right { text-align: right; }
+.qdatabase table .center { text-align: center; }
+.qdatabase table tr.header th { font-size: 1.4em; background: #222; color: #EEE; border-color: #222; }
+.qdatabase table tr.subheader th { text-transform: lowercase; font-variant: small-caps; background: #DDD; color: #777; text-align: center; }
+.qdatabase table td,th { padding: 0.2em 0.4em; border: solid 1px #999; }
+.qdatabase table td.sql { font-family: courier; font-size: 0.9em; }
+.qdatabase table tr.query { background: #D2F1CB; }
+.qdatabase table tr.transaction { background: #EAD3CB; }
+.qdatabase table tr.prepare { background: #ACD4F0; }
+.qdatabase table tr.execute { background: #71BDF0; }
+

@@ -4,9 +4,10 @@ class QDatabase
 {
   public static $default = 'default';
   public static $instances = array();
-  private $name = null;
 
+  private $name = null;
   private $driver = null;
+  public static $queries = array();
 
   public function __construct($name = null, array $config = null)
   {
@@ -43,6 +44,7 @@ class QDatabase
 
   public function begin($label = null)
   {
+    $transaction_depth = count($this->transactions_stack);
     if (!$this->driver->has_transactions()) {
       throw new QDatabase_Exception('FIXME');
     }
@@ -50,16 +52,39 @@ class QDatabase
       if (!$this->driver->has_savepoints()) {
         throw new QDatabase_Exception('FIXME');
       } else {
-        $this->transactions_stack[] = array('label' => $label, 'internal_label' => $this->driver->begin_savepoint($label));
+        $timestamp = microtime(true);
+        $this->transactions_stack[] = $transaction = array('label' => $label, 'internal_label' => $this->driver->begin_savepoint($label));
+        $timestamp = microtime(true) - $timestamp;
+        self::$queries[] = array(
+          'instance' => $this->name,
+          'transaction_depth' => $transaction_depth . ' -> ' . count($this->transactions_stack),
+          'type' => 'transaction',
+          'sql' => implode(" / ", array("BEGIN", (@$transaction['label'] ?: '-'), (@$transaction['internal_label'] ?: '-'))),
+          'acount' => 0,
+          'rcount' => 0,
+          'time' => sprintf("%.6f", $timestamp),
+        );
       }
     } else {
+      $timestamp = microtime(true);
       $this->driver->begin_transaction();
       $this->transactions_stack[] = array('label' => $label);
+      $timestamp = microtime(true) - $timestamp;
+      self::$queries[] = array(
+        'instance' => $this->name,
+        'transaction_depth' => $transaction_depth . ' -> ' . count($this->transactions_stack),
+        'type' => 'transaction',
+        'sql' => implode(" / ", array("BEGIN", (@$transaction['label'] ?: '-'), (@$transaction['internal_label'] ?: '-'))),
+        'acount' => 0,
+        'rcount' => 0,
+        'time' => sprintf("%.6f", $timestamp),
+      );
     }
   }
 
   public function commit($label = null)
   {
+    $transaction_depth = count($this->transactions_stack);
     if (!$this->driver->has_transactions()) {
       throw new QDatabase_Exception('FIXME');
     }
@@ -67,17 +92,39 @@ class QDatabase
       throw new QDatabase_Exception('FIXME');
     }
     if ($label === true) {
+      $timestamp = microtime(true);
       $this->driver->commit_transaction();
       $this->transactions_stack = array();
+      $timestamp = microtime(true) - $timestamp;
+      self::$queries[] = array(
+        'instance' => $this->name,
+        'transaction_depth' => $transaction_depth . ' -> ' . count($this->transactions_stack),
+        'type' => 'transaction',
+        'sql' => implode(" / ", array("COMMIT", (@$transaction['label'] ?: '-'), (@$transaction['internal_label'] ?: '-'))),
+        'acount' => 0,
+        'rcount' => 0,
+        'time' => sprintf("%.6f", $timestamp),
+      );
       return;
     } else {
       while ($transaction = array_pop($this->transactions_stack)) {
         if ($transaction['label'] === $label) {
+          $timestamp = microtime(true);
           if (!empty($this->transactions_stack)) {
             $this->driver->commit_savepoint($transaction['internal_label']);
           } else {
             $this->driver->commit_transaction();
           }
+          $timestamp = microtime(true) - $timestamp;
+          self::$queries[] = array(
+            'instance' => $this->name,
+            'transaction_depth' => $transaction_depth . ' -> ' . count($this->transactions_stack),
+            'type' => 'transaction',
+            'sql' => implode(" / ", array("COMMIT", (@$transaction['label'] ?: '-'), (@$transaction['internal_label'] ?: '-'))),
+            'acount' => 0,
+            'rcount' => 0,
+            'time' => sprintf("%.6f", $timestamp),
+          );
           return;
         }
       }
@@ -87,6 +134,7 @@ class QDatabase
 
   public function rollback($label = null)
   {
+    $transaction_depth = count($this->transactions_stack);
     if (!$this->driver->has_transactions()) {
       throw new QDatabase_Exception('FIXME');
     }
@@ -94,17 +142,39 @@ class QDatabase
       throw new QDatabase_Exception('FIXME');
     }
     if ($label === true) {
+      $timestamp = microtime(true);
       $this->driver->rollback_transaction();
       $this->transactions_stack = array();
+      $timestamp = microtime(true) - $timestamp;
+      self::$queries[] = array(
+        'instance' => $this->name,
+        'transaction_depth' => $transaction_depth . ' -> ' . count($this->transactions_stack),
+        'type' => 'transaction',
+        'sql' => implode(" / ", array("ROLLBACK", (@$transaction['label'] ?: '-'), (@$transaction['internal_label'] ?: '-'))),
+        'acount' => 0,
+        'rcount' => 0,
+        'time' => sprintf("%.6f", $timestamp),
+      );
       return;
     } else {
       while ($transaction = array_pop($this->transactions_stack)) {
         if ($transaction['label'] === $label) {
+          $timestamp = microtime(true);
           if (!empty($this->transactions_stack)) {
             $this->driver->rollback_savepoint($transaction['internal_label']);
           } else {
             $this->driver->rollback_transaction();
           }
+          $timestamp = microtime(true) - $timestamp;
+          self::$queries[] = array(
+            'instance' => $this->name,
+            'transaction_depth' => $transaction_depth . ' -> ' . count($this->transactions_stack),
+            'type' => 'transaction',
+            'sql' => implode(" / ", array("ROLLBACK", (@$transaction['label'] ?: '-'), (@$transaction['internal_label'] ?: '-'))),
+            'acount' => 0,
+            'rcount' => 0,
+            'time' => sprintf("%.6f", $timestamp),
+          );
           return;
         }
       }
@@ -116,7 +186,19 @@ class QDatabase
 
   public function query($sql, $params = array())
   {
-    return $this->driver->query($this->sql($sql, $params));
+    $timestamp = microtime(true);
+    $result = $this->driver->query($sql_parsed = $this->sql($sql, $params));
+    $timestamp = microtime(true) - $timestamp;
+    self::$queries[] = array(
+      'instance' => $this->name,
+      'transaction_depth' => count($this->transactions_stack),
+      'type' => 'query',
+      'sql' => $sql_parsed,
+      'acount' => $result->acount(),
+      'rcount' => $result->rcount(),
+      'time' => sprintf("%.6f", $timestamp),
+    );
+    return $result;
   }
 
   public function sql($sql, $params = array())
