@@ -16,6 +16,11 @@ abstract class QDatabase_Driver
     return array();
   }
 
+  public function builder_class()
+  {
+    return false;
+  }
+
   public function has_transactions()
   {
     return false;

@@ -226,5 +226,10 @@ class QDatabase_Driver_PgSQL extends QDatabase_Driver
     }
     return $hstore_escaped;
   }
+
+  public function builder_class()
+  {
+    return 'QDatabase_Builder_PgSQL';
+  }
 }
 

@@ -9,6 +9,8 @@ class QDatabase
   private $driver = null;
   public static $queries = array();
 
+  private $builder = null;
+
   public function __construct($name = null, array $config = null)
   {
     $this->name = $name;
@@ -281,5 +283,17 @@ class QDatabase
       return call_user_func_array($method, $args);
     }
     throw new QDatabase_Exception('FIXME');
+  }
+
+  public function builder()
+  {
+    $class = $this->driver->builder_class();
+    if ($class === false) {
+      throw new QDatabase_Exception('FIXME');
+    }
+    if ($this->builder === null) {
+      $this->builder = new $class($this);
+    }
+    return $this->builder;
   }
 }
