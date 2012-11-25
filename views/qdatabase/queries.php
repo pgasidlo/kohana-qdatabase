@@ -54,6 +54,7 @@
       <?php endforeach; ?>
     </tbody>
     <tfoot>
+      <?php $all = array('time' => 0, 'rcount' => 0, 'acount' => 0); ?>
       <?php foreach ($totals as $instance => $total): ?>
       <tr>
         <td class="right" colspan="3">
